@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  server:
+    build: ./server
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./server:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    networks:
+      - backend
+    depends_on:
+      database:
+        condition: service_healthy
+
+  client:
+    build: ./client
+    ports:
+      - "3000:3000"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - frontend
+
+  database:
+    image: postgres
+    ports:
+      - "5432:5432"
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data  # 🔥 This makes your DB persistent!
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "myuser", "-d", "resumeDB"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 5s
+
+volumes:
+  pgdata:  # 🔥 This defines the named volume
+
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge
